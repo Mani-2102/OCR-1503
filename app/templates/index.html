@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Invoice</title>
+    
+    <!-- Load PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <style>
+        body {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .left-container {
+            width: 40%;
+        }
+        .right-container {
+            width: 55%;
+            border: 1px solid black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 500px;
+        }
+        canvas {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+
+    <script>
+        function handleFileInput(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                alert("Please select a file.");
+                return;
+            }
+
+            // Display file name
+            document.getElementById("fileName").innerText = file.name;
+
+            // Ensure it's a PDF
+            if (file.type !== "application/pdf") {
+                alert("Invalid file type. Please select a PDF.");
+                return;
+            }
+
+            // Read PDF File
+            const fileReader = new FileReader();
+            fileReader.onload = function() {
+                const pdfData = new Uint8Array(this.result);
+                pdfjsLib.getDocument({ data: pdfData }).promise.then(pdf => {
+                    pdf.getPage(1).then(page => {
+                        const scale = 1.5;
+                        const viewport = page.getViewport({ scale });
+                        const canvas = document.getElementById("pdfPreview");
+                        const context = canvas.getContext("2d");
+                        
+                        // Set correct canvas size
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        
+                        // Render PDF page
+                        page.render({ canvasContext: context, viewport });
+                    });
+                }).catch(error => {
+                    console.error("Error loading PDF:", error);
+                    alert("Failed to load PDF. Check the console for details.");
+                });
+            };
+            fileReader.readAsArrayBuffer(file);
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Left Section: Upload Form -->
+    <div class="left-container">
+        <h2>Upload Invoice</h2>
+        <form action="/process_invoice" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" accept="application/pdf" onchange="handleFileInput(event)">
+            <span id="fileName">No file chosen</span>
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
+    <!-- Right Section: PDF Preview -->
+    <div class="right-container">
+        <canvas id="pdfPreview"></canvas>
+    </div>
+
+</body>
+</html>
